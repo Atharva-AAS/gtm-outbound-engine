@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Autonomous GTM Support-to-Sales Triage Engine
 
 ## Overview
