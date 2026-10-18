@@ -1,13 +1,19 @@
-import psycopg2
 import os
 import time
-from google import genai
+
+import psycopg2
 from dotenv import load_dotenv
+from google import genai
 
-# Securely load the key from the .env file
+# Load environment variables from the local .env file
 load_dotenv()
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+api_key = os.environ.get("GEMINI_API_KEY")
 
+if not api_key:
+    raise ValueError("CRITICAL: GEMINI_API_KEY is missing from environment variables.")
+
+# Initialize the V2 Gemini client securely
+client = genai.Client(api_key=api_key)
 
 try:
     connection = psycopg2.connect(
@@ -20,13 +26,13 @@ try:
     )
     leads = cursor.fetchall()
 
-    print("--- INITIATING AI OUTREACH GENERATION (V3.8 ENGINE) ---")
+    print("--- INITIATING AI OUTREACH GENERATION (SECURE V3.8 ENGINE) ---")
 
     for lead in leads:
         lead_id, company, dm_name, score = lead
         prompt = f"Write a strict 3-line cold email to {dm_name} at {company}. Mention we noticed their high intent score of {score} and offer a quick AI automation audit. Do not use generic greetings."
 
-        # Robust retry logic for 503 High Demand
+        # Exponential backoff loop for network or 503 high-demand spikes
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -43,7 +49,7 @@ try:
                 )
                 break
             except Exception as api_error:
-                if "503" in str(api_error):
+                if "503" in str(api_error) or "UNAVAILABLE" in str(api_error):
                     wait_time = 2**attempt
                     print(f"Server busy. Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
